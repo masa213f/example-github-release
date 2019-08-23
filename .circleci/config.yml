@@ -11,6 +11,34 @@ jobs:
     - run: make build
     - run: ./sample
 
+  release_build:
+    working_directory: /go/src/github.com/{{ORG_NAME}}/{{REPO_NAME}}
+    docker:
+    - image: circleci/golang:1.12
+    steps:
+    - run: echo "export RELEASE_VERSION=${CIRCLE_TAG#release-v}" >> ${BASH_ENV}
+    - checkout
+    - run: go get -v -t -d ./...
+    - run: go test -v ./...
+    - run:
+        name: build
+        command: |
+          source ${BASH_ENV}
+          make build VERSION=${RELEASE_VERSION}
+    - run:
+        name: check release version
+        command: |
+          source ${BASH_ENV}
+          echo ${RELEASE_VERSION}
+          PRERELEASE=$(./semver ${RELEASE_VERSION})
+          echo "export PRERELEASE=${PRERELEASE}" >> ${BASH_ENV}
+    - run:
+        name: run
+        command: |
+          echo "Version: ${RELEASE_VERSION}"
+          echo "Prelease: ${PRERELEASE}"
+          ./sample
+
 workflows:
   version: 2
   main:
@@ -20,3 +48,12 @@ workflows:
           branches:
             ignore:
             - release
+
+  release:
+    jobs:
+    - release_build:
+        filters:
+          branches:
+            ignore: /.*/
+          tags:
+            only: /^release-.*/
