@@ -8,7 +8,7 @@ mod: go.mod
 	go mod vendor
 
 build:
-	go build -o $(TARGET) -ldflags "-X main.version=$(VERSION)" ./.
+	go build -o $(TARGET) -ldflags "-X main.version=$(VERSION)" ./cmd/sample
 
 run:
 	./$(TARGET)
