@@ -1,7 +1,7 @@
 version: 2
 jobs:
   build:
-    working_directory: /go/src/github.com/{{ORG_NAME}}/{{REPO_NAME}}
+    working_directory: /go/src/github.com/masa213f/github-release-sample
     docker:
     - image: circleci/golang:1.12
     steps:
@@ -11,8 +11,8 @@ jobs:
     - run: make build
     - run: ./sample
 
-  release_build:
-    working_directory: /go/src/github.com/{{ORG_NAME}}/{{REPO_NAME}}
+  release:
+    working_directory: /go/src/github.com/masa213f/github-release-sample
     docker:
     - image: circleci/golang:1.12
     steps:
@@ -28,16 +28,29 @@ jobs:
     - run:
         name: check release version
         command: |
-          source ${BASH_ENV}
-          echo ${RELEASE_VERSION}
           PRERELEASE=$(./semver ${RELEASE_VERSION})
           echo "export PRERELEASE=${PRERELEASE}" >> ${BASH_ENV}
+          echo "Version: ${RELEASE_VERSION}"
+          echo "Prelease: ${PRERELEASE}"
     - run:
         name: run
         command: |
-          echo "Version: ${RELEASE_VERSION}"
-          echo "Prelease: ${PRERELEASE}"
           ./sample
+    - run:
+        name: archive
+        command: |
+          mkdir /tmp/release
+          git archive --format=tar.gz ${CIRCLE_TAG} > /tmp/release/v${RELEASE_VERSION}.tar.gz
+          git archive --format=zip ${CIRCLE_TAG} > /tmp/release/v${RELEASE_VERSION}.zip
+          tar czf /tmp/release/sample-linux-amd64-v${RELEASE_VERSION}.tar.gz sample
+    - run: GO111MODULE=on go get github.com/tcnksm/ghr
+    - run:
+        name: release as draft
+        command: |
+          if [ -n "${PRELEASE}" ]; then
+             PRE_OPT=-prerelease
+          fi
+          ghr -draft ${PRE_OPT} -n v${RELEASE_VERSION} ${CIRCLE_TAG} /tmp/release
 
 workflows:
   version: 2
@@ -51,9 +64,9 @@ workflows:
 
   release:
     jobs:
-    - release_build:
+    - release:
         filters:
           branches:
             ignore: /.*/
           tags:
-            only: /^release-.*/
+            only: /^release-v.*/
