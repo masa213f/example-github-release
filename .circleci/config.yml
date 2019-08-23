@@ -1,0 +1,22 @@
+version: 2
+jobs:
+  build:
+    working_directory: /go/src/github.com/{{ORG_NAME}}/{{REPO_NAME}}
+    docker:
+    - image: circleci/golang:1.12
+    steps:
+    - checkout
+    - run: go get -v -t -d ./...
+    - run: go test -v ./...
+    - run: make build
+    - run: ./sample
+
+workflows:
+  version: 2
+  main:
+    jobs:
+    - build:
+        filters:
+          branches:
+            ignore:
+            - release
