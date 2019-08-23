@@ -1,4 +1,4 @@
-TARGET=sample
+TARGET=sample semver
 VERSION=unknown
 
 all: mod build
@@ -7,8 +7,13 @@ mod: go.mod
 	go mod tidy
 	go mod vendor
 
-build:
-	go build -o $(TARGET) -ldflags "-X main.version=$(VERSION)" ./cmd/sample
+build: $(TARGET)
+
+sample: go.mod ./cmd/sample/main.go
+	go build -ldflags "-X main.version=$(VERSION)" ./cmd/sample
+
+semver: go.mod ./cmd/semver/main.go
+	go build ./cmd/semver
 
 run:
 	./$(TARGET)
