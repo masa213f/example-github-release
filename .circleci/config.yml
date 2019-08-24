@@ -39,6 +39,7 @@ jobs:
     - run:
         name: archive
         command: |
+          set -x
           mkdir /tmp/release
           git archive --format=tar.gz ${CIRCLE_TAG} > /tmp/release/v${RELEASE_VERSION}.tar.gz
           git archive --format=zip ${CIRCLE_TAG} > /tmp/release/v${RELEASE_VERSION}.zip
@@ -47,6 +48,7 @@ jobs:
     - run:
         name: release as draft
         command: |
+          set -x
           if [ -n "${PRELEASE}" ]; then
              PRE_OPT=-prerelease
           fi
