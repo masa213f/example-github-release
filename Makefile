@@ -5,8 +5,8 @@ SOURCE = $(shell find . -type f -name "*.go" -not -name "*_test.go")
 all: build
 
 setup:
-	GO111MODULE=on go get -u golang.org/x/tools/cmd/goimports
-	GO111MODULE=on go get -u golang.org/x/lint/golint
+	go get -u golang.org/x/tools/cmd/goimports
+	go get -u golang.org/x/lint/golint
 
 mod:
 	go mod tidy
