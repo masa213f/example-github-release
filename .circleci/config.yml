@@ -1,6 +1,6 @@
 version: 2
 jobs:
-  build:
+  test:
     working_directory: /go/src/github.com/masa213f/example-github-release
     docker:
     - image: circleci/golang:1.12
@@ -11,7 +11,7 @@ jobs:
     - run: make setup
     - run: make test
 
-  release:
+  github_release:
     working_directory: /go/src/github.com/masa213f/example-github-release
     docker:
     - image: circleci/golang:1.12
@@ -31,7 +31,7 @@ jobs:
           echo "export RELEASE_VERSION=${RELEASE_VERSION}" >> ${BASH_ENV}
           echo "Version: ${RELEASE_VERSION}"
     - run:
-        name: build / run
+        name: build and run
         command: |
           make build VERSION=${RELEASE_VERSION}
           ./sample
@@ -56,19 +56,19 @@ workflows:
   version: 2
   main:
     jobs:
-    - build
+    - test
 
   release:
     jobs:
-    - build:
+    - test:
         filters:
           branches:
             ignore: /.*/
           tags:
             only: /^v.*/
-    - release:
+    - github_release:
         requires:
-        - build
+        - test
         filters:
           branches:
             ignore: /.*/
