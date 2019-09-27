@@ -1,28 +1,38 @@
-TARGET=sample semver
-VERSION=unknown
+TARGET  = sample
+VERSION = unknown
+SOURCE = $(shell find . -type f -name "*.go" -not -name "*_test.go")
 
-all: mod build
+all: build
 
-mod: go.mod
+setup:
+	GO111MODULE=on go get -u golang.org/x/tools/cmd/goimports
+	GO111MODULE=on go get -u golang.org/x/lint/golint
+
+mod:
 	go mod tidy
 	go mod vendor
 
-build: $(TARGET)
+build: mod $(TARGET)
 
-sample: go.mod ./cmd/sample/main.go
-	go build -ldflags "-X main.version=$(VERSION)" ./cmd/sample
+$(TARGET): $(SOURCE)
+	go build -o $@ -ldflags "-X main.version=$(VERSION)" ./cmd/$@
 
-semver: go.mod ./cmd/semver/main.go
-	go build ./cmd/semver
-
-run:
+run: $(TARGET)
 	./$(TARGET)
 
 clean:
-	rm $(TARGET)
+	-rm $(TARGET)
 
 distclean: clean
-	rm go.sum
-	rm -rf vendor
+	-rm go.sum
+	-rm -rf vendor
 
-.PHONY: all mod build run clean dstclean
+fmt:
+	goimports -w $$(find . -type d -name 'vendor' -prune -o -type f -name '*.go' -print)
+
+test:
+	test -z "$$(goimports -l $$(find . -type d -name 'vendor' -prune -o -type f -name '*.go' -print) | tee /dev/stderr)"
+	test -z "$$(golint $$(go list ./... | grep -v '/vendor/') | tee /dev/stderr)"
+	go test -v ./...
+
+.PHONY: all setup mod build run clean distclean fmt test

@@ -6,35 +6,30 @@ jobs:
     - image: circleci/golang:1.12
     steps:
     - checkout
-    - run: go get -v -t -d ./...
-    - run: go test -v ./...
-    - run: make build
-    - run: ./sample
+    - run: make setup
+    - run: make test
 
   release:
     working_directory: /go/src/github.com/masa213f/example-github-release
     docker:
     - image: circleci/golang:1.12
     steps:
-    - run: echo "export RELEASE_VERSION=${CIRCLE_TAG#release-v}" >> ${BASH_ENV}
     - checkout
-    - run: go get -v -t -d ./...
-    - run: go test -v ./...
-    - run:
-        name: build
+    - run: 
+        name: setup tools for release
         command: |
-          source ${BASH_ENV}
-          make build VERSION=${RELEASE_VERSION}
+            GO111MODULE=on go get -u github.com/masa213f/semver/cmd/semver
+            GO111MODULE=on go get -u github.com/tcnksm/ghr
     - run:
-        name: check release version
+        name: confirm release version
         command: |
-          PRERELEASE=$(./semver ${RELEASE_VERSION})
-          echo "export PRERELEASE=${PRERELEASE}" >> ${BASH_ENV}
+          RELEASE_VERSION=$(semver ${CIRCLE_TAG} --json | jq -r ".version")
+          echo "export RELEASE_VERSION=${RELEASE_VERSION}" >> ${BASH_ENV}
           echo "Version: ${RELEASE_VERSION}"
-          echo "Prelease: ${PRERELEASE}"
     - run:
-        name: run
+        name: build / run
         command: |
+          make build VERSION=${RELEASE_VERSION}
           ./sample
     - run:
         name: archive
@@ -42,14 +37,13 @@ jobs:
           set -x
           mkdir /tmp/release
           git archive --format=tar.gz ${CIRCLE_TAG} > /tmp/release/v${RELEASE_VERSION}.tar.gz
-          git archive --format=zip ${CIRCLE_TAG} > /tmp/release/v${RELEASE_VERSION}.zip
+          git archive --format=zip    ${CIRCLE_TAG} > /tmp/release/v${RELEASE_VERSION}.zip
           tar czf /tmp/release/sample-linux-amd64-v${RELEASE_VERSION}.tar.gz sample
-    - run: GO111MODULE=on go get github.com/tcnksm/ghr
     - run:
         name: release as draft
         command: |
           set -x
-          if [ -n "${PRELEASE}" ]; then
+          if semver -p "${RELEASE_VERSION}"; then
              PRE_OPT=-prerelease
           fi
           ghr -draft ${PRE_OPT} -n v${RELEASE_VERSION} ${CIRCLE_TAG} /tmp/release
@@ -58,15 +52,19 @@ workflows:
   version: 2
   main:
     jobs:
-    - build:
-        filters:
-          branches:
-            ignore:
-            - release
+    - build
 
   release:
     jobs:
+    - build:
+        filters:
+          branches:
+            ignore: /.*/
+          tags:
+            only: /^release-v.*/
     - release:
+        requires:
+        - build
         filters:
           branches:
             ignore: /.*/
